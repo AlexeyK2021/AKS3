@@ -1,0 +1,146 @@
+openapi: "3.1.0"
+info:
+  title: Storage API
+  version: "1.0"
+servers:
+  - url: https://<API_URL>/api/v1
+
+components:
+  schemas:
+    Status:
+      type: object
+      properties:
+        cpu_usage:
+          type: number
+          format: float
+          description: Использование ЦП
+          example: 3
+        memory_usage:
+          type: number
+          format: float
+          description: Использование ОЗУ
+          example: 10.5
+        disk_usage_gb:
+          type: number
+          format: float
+          description: Использование диска для хранения в ГБ
+          example: 512
+        disk_total_gb:
+          type: number
+          format: float
+          description: Общий объем диска в ГБ
+          example: 1000
+
+    ChunkCreatedResponse:
+      type: object
+      properties:
+        chunk_hash:
+          type: string
+          description: "MD5 хэш-сумма объекта"
+          example: 202cb962ac59075b964b07152d234b70
+
+paths:
+  /healthcheck:
+    get:
+      summary: Проверка доступности
+      tags:
+        - Информация о хранилище
+      responses:
+        '200':
+          description: ОК
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /status:
+    get:
+      summary: Статистика хранилища
+      tags:
+        - Информация о хранилище
+      responses:
+        '200':
+          description: Информация о хранилище
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+
+  /file/{chunk_id}:
+    get:
+      summary: Получить чанк
+      tags:
+        - Управление чанками
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      responses:
+        "200":
+          description: Чанк найден
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                properties:
+                  binary_data:
+                    type: string
+                    description: Данные чанка
+        "404":
+          description: Чанк не найден
+
+    post:
+      summary: Загрузить чанк
+      tags:
+        - Управление чанками
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                binary_data:
+                  type: string
+                  description: Данные чанка
+      responses:
+        "201":
+          description: Чанк успешно загружен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChunkCreatedResponse"
+
+    delete:
+      summary: Удалить чанк
+      tags:
+        - Управление чанками
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      responses:
+        "200":
+          description: Чанк удален
+        "404":
+          description: Чанк не найден
+
+
+

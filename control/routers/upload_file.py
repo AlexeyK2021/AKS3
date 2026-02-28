@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.DatabaseManager import get_db, db_manager
+from control.database.DatabaseManager import get_db, db_manager
 
 load_dotenv()
 PATH = os.getenv("DATA_PATH")
