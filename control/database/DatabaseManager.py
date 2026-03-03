@@ -1,6 +1,7 @@
 import os
 
 from dotenv import load_dotenv
+from sqlalchemy import ForeignKey, select, Connection
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -10,13 +11,35 @@ class Base(DeclarativeBase):
 
 
 class FileMetadata(Base):
-    __tablename__ = "files"
+    __tablename__ = "file"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    sha256: Mapped[str] = mapped_column(unique=True, index=True)
     filename: Mapped[str] = mapped_column()
-    path: Mapped[str] = mapped_column()
     size: Mapped[float] = mapped_column()
+    md5sum: Mapped[str] = mapped_column()
+
+
+class Chunk(Base):
+    __tablename__ = "chunk"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    file_id: Mapped[str] = mapped_column(ForeignKey("file.id"))
+
+
+class ChunkStorage(Base):
+    __tablename__ = "chunk_storage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    storage_id: Mapped[int] = mapped_column(ForeignKey("storage.id"))
+    chunk_id: Mapped[str] = mapped_column(ForeignKey("chunk.id"))
+
+
+class Storage(Base):
+    __tablename__ = "storage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ip: Mapped[str] = mapped_column()
+    port: Mapped[str] = mapped_column()
 
 
 class DatabaseManager:
@@ -37,6 +60,10 @@ class DatabaseManager:
             session.add(new_file)
             await session.commit()
 
+    async def get_storages(self):
+        async with self.session_factory() as session:
+            result = await session.execute(select(Storage))
+            return result.scalars().all()
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./local.db")

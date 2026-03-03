@@ -2,6 +2,7 @@ import hashlib
 import os
 
 import aiofiles
+import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,24 @@ router = APIRouter(
 )
 
 
+async def find_free_nodes(db: AsyncSession = Depends(get_db)) -> list:
+    storages = await db_manager.get_storages()
+    online_storages = []
+    async with httpx.AsyncClient() as client:
+        for node in storages:
+            address = f"{node.ip}:{node.port}"
+            response = await client.get(f"http://{address}/api/status")
+            if response.status_code == 200:
+                online_storages.append({address: response.json()})
+    return online_storages
+
+
+@router.get("/upload/testdb")
+async def testdb():
+    storages = await find_free_nodes()
+    return {"storages": storages}
+
+
 @router.put("/upload")
 async def upload_file(
         file: UploadFile = File(),
@@ -28,6 +47,7 @@ async def upload_file(
     async with aiofiles.open(temp_path, 'wb') as out_file:
         while content := await file.read(1024 * 1024):
             sha256_hash.update(content)
+
             await out_file.write(content)
 
     file_hash = sha256_hash.hexdigest()

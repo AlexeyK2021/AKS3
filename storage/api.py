@@ -8,8 +8,6 @@ from storage.routes import file
 
 load_dotenv()
 app = FastAPI(root_path="/api")
-
-
 app.include_router(file.router)
 
 def bytes_to_gb(bytes):
