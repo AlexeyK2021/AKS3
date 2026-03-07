@@ -3,7 +3,7 @@ import os
 
 import aiofiles
 from dotenv import load_dotenv
-from fastapi import APIRouter, Path, UploadFile, File
+from fastapi import APIRouter, Path, UploadFile, File, Request
 from typing import Annotated
 
 from starlette.responses import FileResponse
@@ -34,12 +34,11 @@ async def get_file(chunk_id: Annotated[str, Path(title="ID of chunk")]):
 
 
 @router.post("/{chunk_id}")
-async def upload_file(
-        chunk_id: Annotated[str, Path(title="ID of chunk")],
-        file: UploadFile = File()
-):
-    async with aiofiles.open(f"{DATA_PATH}/{chunk_id}", 'wb') as out_file:
-        content = await file.read()
+async def upload_file(chunk_id: str, request: Request):
+    content = await request.body()
+
+    file_path = os.path.join(DATA_PATH, chunk_id)
+    async with aiofiles.open(file_path, 'wb') as out_file:
         await out_file.write(content)
 
     md5sum = md5(f"{DATA_PATH}/{chunk_id}")

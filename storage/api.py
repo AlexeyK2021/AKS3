@@ -4,7 +4,7 @@ from fastapi import FastAPI
 import os
 import psutil
 
-from storage.routes import file
+from routes import file
 
 load_dotenv()
 app = FastAPI(root_path="/api")

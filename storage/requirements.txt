@@ -3,3 +3,5 @@ uvicorn
 python-dotenv
 psutil
 hashlib
+aiofiles
+python-multipart

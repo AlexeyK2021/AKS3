@@ -5,6 +5,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
+from control.routers.upload_file import find_online_nodes
 from database.DatabaseManager import Base, db_manager
 from routers import upload_file
 
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI):
     print("Соединение с БД закрыто")
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, root_path="/api")
 app.include_router(upload_file.router)
 
 if __name__ == "__main__":
