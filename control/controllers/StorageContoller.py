@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import UploadFile
 
 from control.controllers.DatabaseController import get_db, db_manager, save_chunk_info, save_chunk_storage_info, \
-    get_chunks_by_file
+    get_useless_chunks, get_chunk_storage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 load_dotenv()
@@ -99,26 +99,29 @@ async def process_file_upload(file: UploadFile, file_name: str, target_nodes: li
     return {"status": "complete", "total_chunks": chunk_index}
 
 
-async def delete_chunks(original_name: str, target_nodes: list, session: AsyncSession):
-    chunks = await get_chunks_by_file(original_name, session)
-
-    tasks = [
-        delete_chunks_from_node(chunks, node)
-        for node in target_nodes
-    ]
-    results = await asyncio.gather(*tasks)
-    if sum(results) < RELEVANT_COUNT:
-        raise Exception(f"Ошибка удаления блоков")
-    else:
-        print(f"Блоки файла {original_name} удалены с нод {target_nodes}")
-
-
-async def delete_chunks_from_node(list_of_chunks: list[str], node_url: str):
-    async with httpx.AsyncClient() as client:
-        for chunk_uuid in list_of_chunks:
-            response = await client.delete(f"http://{node_url}/api/file/{chunk_uuid}")
-            if response.status_code == 200:
-                print(f"Блок {chunk_uuid} удален с ноды {node_url}")
-            else:
-                print(f"Ошибка при удалении блока {chunk_uuid} с ноды {node_url}")
-
+# async def delete_useless_chunks(session: AsyncSession):
+#     chunks = await get_useless_chunks(session)
+#     chunk_and_storage = dict()
+#     for chunk in chunks:
+#         chunk_storage = await get_chunk_storage(chunk.id, session)
+#         chunk_and_storage[chunk.id] = [cs.storage_id for cs in chunk_storage]
+#
+#     tasks = [
+#         delete_chunks_from_node(chunks, node)
+#         for node in target_nodes
+#     ]
+#     results = await asyncio.gather(*tasks)
+#     if sum(results) < RELEVANT_COUNT:
+#         raise Exception(f"Ошибка удаления блоков")
+#     else:
+#         print(f"Блоки файла {original_name} удалены с нод {target_nodes}")
+#
+#
+# async def delete_chunks_from_node(chunk: str, node_url: str):
+#     async with httpx.AsyncClient() as client:
+#         for chunk in list_of_chunks:
+#             response = await client.delete(f"http://{node_url}/api/file/{chunk.uuid}")
+#             if response.status_code == 200:
+#                 print(f"Блок {chunk_uuid} удален с ноды {node_url}")
+#             else:
+#                 print(f"Ошибка при удалении блока {chunk_uuid} с ноды {node_url}")

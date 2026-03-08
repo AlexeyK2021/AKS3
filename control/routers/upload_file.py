@@ -1,9 +1,9 @@
 from fastapi import APIRouter, UploadFile, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.controllers.DatabaseController import get_db, db_manager, rollback_session, save_file_info, commit_session
-from control.controllers.StorageContoller import get_most_relevant, find_online_nodes, process_file_upload, \
-    delete_chunks
+from control.controllers.DatabaseController import get_db, db_manager, rollback_session, add_file_info, commit_session
+from control.controllers.StorageContoller import get_most_relevant, find_online_nodes, process_file_upload
+from control.controllers.models import FileMetadata
 
 router = APIRouter(
     prefix="/file",
@@ -23,11 +23,11 @@ async def upload_file(file: UploadFile, db: AsyncSession = Depends(get_db)):
 
     print(f"Начита загрузка файла: {original_name}")
     session = await db_manager.get_session()
+    new_file = FileMetadata(filename=original_name, status_id=1)
     try:
-        await save_file_info(original_name, session)
+        await add_file_info(new_file, session)
         result = await process_file_upload(file, original_name, target_nodes, session)
-        await commit_session(session)
-        await db_manager.close_session()
+        new_file.status_id = 3
 
         return {
             "filename": original_name,
@@ -38,6 +38,8 @@ async def upload_file(file: UploadFile, db: AsyncSession = Depends(get_db)):
 
     except Exception as e:
         # await delete_chunks(original_name, target_nodes, session)
-        await rollback_session(session)
-        await db_manager.close_session()
+        new_file.status_id = 2
         raise HTTPException(status_code=500, detail=f"Ошибка при сохранении блоков: {str(e)}")
+    finally:
+        await commit_session(session)
+        await db_manager.close_session()

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from control.controllers.models import Base, FileMetadata, Chunk, ChunkStorage, Storage
+from control.controllers.models import Base, FileMetadata, Chunk, ChunkStorage, Storage, FileStatus
 
 
 async def commit_session(session: AsyncSession):
@@ -16,8 +16,8 @@ async def rollback_session(session: AsyncSession):
     await session.rollback()
 
 
-async def save_file_info(filename: str, session: AsyncSession):
-    new_file = FileMetadata(filename=filename)
+async def add_file_info(new_file: FileMetadata, session: AsyncSession):
+    # new_file = FileMetadata(filename=filename, status_id=status_id)
     session.add(new_file)
     await session.flush()
     # await session.commit()
@@ -42,18 +42,25 @@ async def save_chunk_storage_info(chunk_id: str, storage_url: str, session: Asyn
     )).scalars().all()[0]
     new_chunk_storage = ChunkStorage(storage_id=storage.id, chunk_id=chunk_id)
     session.add(new_chunk_storage)
-    await session.flush()
+    # await session.flush()
     # await session.commit()
 
 
-async def get_chunks_by_file(filename: str, session: AsyncSession):
+async def get_useless_chunks(session: AsyncSession):
     result = (await session.execute(
         select(Chunk)
         .join(FileMetadata, Chunk.file_id == FileMetadata.id)
-        .where(FileMetadata.filename == filename)
+        .join(FileStatus, FileMetadata.status_id == FileStatus.id)
+        .where(FileStatus.name == "error")
     )).scalars().all()
     return result
 
+
+async def get_chunk_storage(chunk_id: str, session: AsyncSession):
+    return (await session.execute(
+        select(ChunkStorage)
+        .where(ChunkStorage.chunk_id == chunk_id)
+    )).scalars().all()
 
 class DatabaseController:
     def __init__(self, db_url: str):
