@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from control.routers.upload_file import find_online_nodes
-from database.DatabaseManager import Base, db_manager
+from controllers.DatabaseController import db_manager
+from control.controllers.models import Base
 from routers import upload_file
 
 load_dotenv()
