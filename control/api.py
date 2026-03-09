@@ -5,10 +5,10 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from control.routers.upload_file import find_online_nodes
-from controllers.DatabaseController import db_manager
 from control.controllers.models import Base
-from routers import upload_file
+from control.routers import buckets
+from controllers.DatabaseController import db_manager
+from control.routers import files
 
 load_dotenv()
 API_PORT = int(os.getenv("API_PORT"))
@@ -27,7 +27,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, root_path="/api")
-app.include_router(upload_file.router)
+app.include_router(files.router)
+app.include_router(buckets.router)
 
 if __name__ == "__main__":
     try:

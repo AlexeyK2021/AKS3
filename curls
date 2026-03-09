@@ -1,0 +1,10 @@
+
+
+
+## ЗАГРУЗКА ФАЙЛА
+
+
+
+
+## Создание бакета
+curl -X POST http://localhost:5050/api/bucket -H "Content-Type: application/json" -d "{\"bucket_name\": \"test_bucket\"}"
