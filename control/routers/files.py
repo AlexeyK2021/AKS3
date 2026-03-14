@@ -5,6 +5,7 @@ from control.controllers.DatabaseController import get_db, db_manager, add_file_
     get_file_in_bucket, get_files_by_bucket
 from control.controllers.StorageContoller import get_most_relevant, find_online_nodes, process_file_upload
 from control.controllers.models import File, FileStatusEnum
+from control.log import log
 
 router = APIRouter(
     prefix="/file",
@@ -27,7 +28,7 @@ async def upload_file(bucket_id: int, file: UploadFile, db: AsyncSession = Depen
     if not target_nodes:
         raise HTTPException(status_code=503, detail="Нет доступных нод")
 
-    print(f"Начита загрузка файла: {original_name}")
+    log("FILE_API", f"Начита загрузка файла: {original_name}")
     session = await db_manager.get_session()
     new_file = File(filename=original_name, status_id=FileStatusEnum.UPLOADING, bucket_id=bucket_id)
     try:
@@ -52,10 +53,10 @@ async def upload_file(bucket_id: int, file: UploadFile, db: AsyncSession = Depen
 
 
 @router.delete("/{bucket_id}/{file_id}")
-async def delete_file(bucket_id: int, file_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_file(bucket_id: int, file_id: int, db: AsyncSession = Depends(get_db)):
     file = await get_file_in_bucket(bucket_id, file_id, db)
     file.status_id = FileStatusEnum.DELETE
     await db.commit()
     await db_manager.close_session()
-    print(f"Файл {file.name}({file_id}) помечен для удаления")
+    log("FILE_API", f"Файл {file.filename}({file_id}) помечен для удаления")
     return {"id": file.id}

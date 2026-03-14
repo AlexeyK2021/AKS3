@@ -8,6 +8,7 @@ from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from control.controllers.DatabaseController import db_manager, save_chunk_info, save_chunk_storage_info, get_storages
+from control.log import log
 
 load_dotenv()
 PATH = os.getenv("DATA_PATH")
@@ -59,14 +60,14 @@ async def upload_chunk_to_node(client: httpx.AsyncClient, node_url: str, chunk_d
     try:
         response = await client.post(f"http://{node_url}/api/file/{chunk_uuid}", content=chunk_data, timeout=60.0)
         if response.status_code == 200:
-            print(f"Блок {chunk_uuid}({chunk_index}) загружен на ноду {node_url}")
+            log("STORAGE", f"Блок {chunk_uuid}({chunk_index}) загружен на ноду {node_url}")
             await save_chunk_storage_info(chunk_uuid, node_url, session)
             return True
         else:
-            print(f"Нода {node_url} ответила ошибкой {response.status_code}")
+            log("STORAGE", f"Нода {node_url} ответила ошибкой {response.status_code}")
             return False
     except Exception as e:
-        print(f"Ошибка при отправке блока {chunk_index} на {node_url}: {e}")
+        log("STORAGE", f"Ошибка при отправке блока {chunk_index} на {node_url}: {e}")
         return False
 
 
@@ -141,7 +142,6 @@ async def process_file_upload(file: UploadFile, file_name: str, target_nodes: li
         "total_chunks": chunk_index,
         "total_bytes": total_bytes
     }
-
 
 # async def delete_useless_chunks(session: AsyncSession):
 #     chunks = await get_useless_chunks(session)

@@ -53,7 +53,7 @@ class Storage(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ip: Mapped[str] = mapped_column()
-    port: Mapped[str] = mapped_column()
+    port: Mapped[int] = mapped_column()
 
 
 class Bucket(Base):

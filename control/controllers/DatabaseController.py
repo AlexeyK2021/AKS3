@@ -68,7 +68,7 @@ async def get_files_by_bucket(bucket_id: int, session: AsyncSession):
     )).scalars().all()
 
 
-async def get_file_in_bucket(bucket_id: int, file_id: str, session: AsyncSession):
+async def get_file_in_bucket(bucket_id: int, file_id: int, session: AsyncSession):
     return (await session.execute(
         select(File)
         .where(File.bucket_id == bucket_id, File.id == file_id)
@@ -104,9 +104,48 @@ async def get_storages(session: AsyncSession):
     return result.scalars().all()
 
 
+async def create_storage(ip: str, port: int, session: AsyncSession):
+    new_storage = Storage(ip=ip, port=port)
+    session.add(new_storage)
+    await session.flush()
+
+
+async def delete_storage(node_id: int, session: AsyncSession):
+    return await session.execute(
+        delete(Storage)
+        .where(Storage.id == node_id)
+        .returning(Storage.id)
+    )
+
+
+async def get_files_to_delete(session: AsyncSession):
+    return (await session.execute(
+        select(File)
+        .where(File.status_id.in_([FileStatusEnum.DELETE, FileStatusEnum.ERROR]))
+    )).scalars().all()
+
+
+async def get_chunks_of_file(session: AsyncSession, file_id: int):
+    return (await session.execute(
+        select(Chunk.id, Storage.ip, Storage.port)
+        .join(ChunkStorage, Chunk.id == ChunkStorage.chunk_id)
+        .join(Storage, ChunkStorage.storage_id == Storage.id)
+        .where(Chunk.file_id == file_id)
+    )).all()
+
+
+async def delete_file_info(session: AsyncSession, file_id: int):
+    await session.execute(delete(ChunkStorage).where(ChunkStorage.chunk_id.in_(
+        select(Chunk.id).where(Chunk.file_id == file_id)
+    )))
+    await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
+    await session.execute(delete(File).where(File.id == file_id))
+    await session.flush()
+
+
 class DatabaseController:
     def __init__(self, db_url: str):
-        self.engine = create_async_engine(db_url, echo=True)
+        self.engine = create_async_engine(db_url, echo=False)
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def create_tables(self):
