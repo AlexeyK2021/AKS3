@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import os
 
 import httpx
@@ -20,7 +19,6 @@ class GarbageCollector:
         self.status_delete_id = FileStatusEnum.DELETE
 
     async def run_forever(self):
-        # log("GC", "Garbage Collector запущен...")
         while True:
             try:
                 await self.cleanup_orphaned_files()
@@ -49,13 +47,23 @@ class GarbageCollector:
             tasks = []
             for chunk_id, ip, port in locations:
                 url = f"http://{ip}:{port}/api/file/{chunk_id}"
-                tasks.append(client.delete(url, timeout=5.0))
+                tasks.append(client.delete(url, timeout=2.0))
 
             if tasks:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                log("GC", f"Отправлено {len(tasks)} команд на удаление для файла {file.filename}")
 
-        await delete_file_info(session, file.id)
+            bad = 0
+            for r in results:
+                if isinstance(r, Exception):
+                    bad += 1
 
-        await session.commit()
-        log("GC", f"Файл {file.filename} полностью удален из системы.")
+            log("GC", f"Отправлено {len(tasks)} команд на удаление для файла {file.filename}")
+            log("GC", f"Неуспешно выполнено {bad} команд на удаление для файла {file.filename}")
+
+            if bad == 0:
+                await delete_file_info(session, file.id)
+
+                await session.commit()
+                log("GC", f"Файл {file.filename} полностью удален из системы.")
+            else:
+                log("GC", f"Файл {file.filename} удален только с некоторых нод")

@@ -110,7 +110,7 @@ async def process_file_upload(file: UploadFile, file_name: str, target_nodes: li
 
             if not chunk_data:
                 if chunk_index == 0:
-                    print("Предупреждение: Файл пуст")
+                    log("STORAGE","Предупреждение: Файл пуст")
                 break
 
             chunk_uuid = str(uuid.uuid4())
@@ -133,7 +133,7 @@ async def process_file_upload(file: UploadFile, file_name: str, target_nodes: li
                 )
 
             total_bytes += len(chunk_data)
-            print(f"Блок {chunk_index} ({len(chunk_data)} байт) записан на {success_count} нод.")
+            log("STORAGE", f"Блок {chunk_index} ({len(chunk_data)} байт) записан на {success_count} нод.")
 
             chunk_index += 1
 

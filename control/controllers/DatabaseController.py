@@ -36,7 +36,7 @@ async def save_chunk_storage_info(chunk_id: str, storage_url: str, session: Asyn
     ip, port = storage_url.split(":")
     storage = (await session.execute(
         select(Storage)
-        .where(Storage.ip == ip, Storage.port == port)
+        .where(Storage.ip == ip, Storage.port == int(port))
     )).scalars().all()[0]
     new_chunk_storage = ChunkStorage(storage_id=storage.id, chunk_id=chunk_id)
     session.add(new_chunk_storage)

@@ -55,6 +55,9 @@ async def upload_file(bucket_id: int, file: UploadFile, db: AsyncSession = Depen
 @router.delete("/{bucket_id}/{file_id}")
 async def delete_file(bucket_id: int, file_id: int, db: AsyncSession = Depends(get_db)):
     file = await get_file_in_bucket(bucket_id, file_id, db)
+    if not file:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
     file.status_id = FileStatusEnum.DELETE
     await db.commit()
     await db_manager.close_session()

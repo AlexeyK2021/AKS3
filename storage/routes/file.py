@@ -3,9 +3,10 @@ import os
 
 import aiofiles
 from dotenv import load_dotenv
-from fastapi import APIRouter, Path, UploadFile, File, Request
+from fastapi import APIRouter, Path, UploadFile, File, Request, HTTPException
 from typing import Annotated
 
+from starlette import status
 from starlette.responses import FileResponse
 
 load_dotenv()
@@ -28,9 +29,9 @@ def md5(fname):
 async def get_file(chunk_id: Annotated[str, Path(title="ID of chunk")]):
     files = os.listdir(DATA_PATH)
     if chunk_id in files:
-        return FileResponse(f"{DATA_PATH}/{chunk_id}", status_code=200)
+        return FileResponse(f"./{DATA_PATH}/{chunk_id}", status_code=200)
     else:
-        return 404
+        raise HTTPException(status_code=404, detail=f"Chunk {chunk_id} not found")
 
 
 @router.post("/{chunk_id}")
@@ -41,16 +42,16 @@ async def upload_file(chunk_id: str, request: Request):
     async with aiofiles.open(file_path, 'wb') as out_file:
         await out_file.write(content)
 
-    md5sum = md5(f"{DATA_PATH}/{chunk_id}")
+    md5sum = md5(f"./{DATA_PATH}/{chunk_id}")
     return {"chunk_hash": md5sum}
 
 
 @router.delete("/{chunk_id}")
 async def delete_file(chunk_id: Annotated[str, Path(title="ID of chunk")]):
-    files = os.listdir(f"{DATA_PATH}")
+    files = os.listdir(f"./{DATA_PATH}")
 
     if chunk_id in files:
-        os.remove(f"{DATA_PATH}/{chunk_id}")
-        return 200
+        os.remove(f"./{DATA_PATH}/{chunk_id}")
+        return {"status": "success", "message": f"Chunk {chunk_id} deleted"}
     else:
-        return 404
+        raise HTTPException(status_code=404, detail=f"Chunk {chunk_id} not found")
