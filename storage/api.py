@@ -7,8 +7,11 @@ import psutil
 from routes import file
 
 load_dotenv()
+DATA_PATH = os.getenv("DATA_PATH")
+
 app = FastAPI(root_path="/api")
 app.include_router(file.router)
+
 
 def bytes_to_gb(bytes):
     return round(bytes / (1024 ** 3), 2)
@@ -21,7 +24,7 @@ async def healthcheck():
 
 @app.get("/status")
 async def status():
-    disk = psutil.disk_usage(os.getenv("DATA_PATH"))
+    disk = psutil.disk_usage(DATA_PATH)
     return {
         "cpu_usage": psutil.cpu_percent(),
         "memory_usage": psutil.virtual_memory().percent,
@@ -31,6 +34,8 @@ async def status():
 
 
 if __name__ == "__main__":
+    if DATA_PATH not in os.listdir():
+        os.mkdir(DATA_PATH)
     try:
         uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("API_PORT")), log_level="info")
     except KeyboardInterrupt:
