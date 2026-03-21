@@ -13,9 +13,9 @@ router = APIRouter(
 )
 
 
-@router.get("/{bucket_id}")
-async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)):
-    return await get_files_by_bucket(bucket_id, db)
+# @router.get("/{bucket_id}")
+# async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)):
+#     return await get_files_by_bucket(bucket_id, db)
 
 
 # TODO() Think about adding file, chunk, chunk_storage data into controllers only after its writing

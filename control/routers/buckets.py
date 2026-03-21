@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.DatabaseController import get_db, db_manager, commit_session, create_bucket, get_buckets_list, \
+from DatabaseController import get_db, db_manager, commit_session, create_bucket, get_buckets_list, \
     delete_bucket
 
 router = APIRouter(
