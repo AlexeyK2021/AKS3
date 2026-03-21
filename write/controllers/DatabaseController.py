@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import select, delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from control.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
+from models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
 
 
 async def commit_session(session: AsyncSession):

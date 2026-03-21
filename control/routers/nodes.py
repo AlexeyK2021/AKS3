@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.controllers.DatabaseController import get_db, get_storages, db_manager, create_storage, commit_session, \
+from control.DatabaseController import get_db, get_storages, db_manager, create_storage, commit_session, \
     delete_storage
 
 router = APIRouter(

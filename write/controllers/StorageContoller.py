@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.controllers.DatabaseController import db_manager, save_chunk_info, save_chunk_storage_info, get_storages
+from DatabaseController import db_manager, save_chunk_info, save_chunk_storage_info, get_storages
 from control.log import log
 
 load_dotenv()
@@ -110,7 +110,7 @@ async def process_file_upload(file: UploadFile, file_name: str, target_nodes: li
 
             if not chunk_data:
                 if chunk_index == 0:
-                    log("STORAGE","Предупреждение: Файл пуст")
+                    log("STORAGE", "Предупреждение: Файл пуст")
                 break
 
             chunk_uuid = str(uuid.uuid4())

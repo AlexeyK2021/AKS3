@@ -5,8 +5,8 @@ import httpx
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.controllers.DatabaseController import get_files_to_delete, get_chunks_of_file, delete_file_info
-from control.controllers.models import FileStatusEnum
+from DatabaseController import get_files_to_delete, get_chunks_of_file, delete_file_info
+from models import FileStatusEnum
 from control.log import log
 
 load_dotenv()
