@@ -105,6 +105,14 @@ async def get_storages(session: AsyncSession):
     return result.scalars().all()
 
 
+async def get_storage_by_id(storage_id: int, session: AsyncSession):
+    result = await session.execute(
+        select(Storage)
+        .where(Storage.id == storage_id)
+    )
+    return result.scalars().first()
+
+
 async def create_storage(ip: str, port: int, session: AsyncSession):
     new_storage = Storage(ip=ip, port=port)
     session.add(new_storage)

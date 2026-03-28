@@ -1,0 +1,296 @@
+openapi: "3.0.3"
+info:
+  title: AKS3 API
+  version: "1.0"
+servers:
+  - url: https://<IP>/api/v1
+
+components:
+  schemas:
+    Bucket:
+      type: object
+      properties:
+        bucket_id:
+          type: integer
+          description: ID бакета
+        bucket_name:
+          type: string
+          description: Имя бакета
+
+    ListBuckets:
+      type: object
+      properties:
+        buckets:
+          type: array
+          $ref: "#/components/schemas/Bucket"
+          description: Список бакетов
+
+    FileDownload:
+      type: object
+      properties:
+        file_id:
+          type: string
+          description: ID файла
+        file_name:
+          type: string
+          description: Имя файла
+        file_size:
+          type: integer
+          description: Размер файла
+
+    FileUpload:
+      type: object
+      properties:
+        binarydata:
+          type: string
+          description: Данные файла
+        bucket_id:
+          type: integer
+          description: ID бакета для загрузки
+
+    FileCreatedResponse:
+      type: object
+      properties:
+        file_id:
+          type: string
+        file_hash:
+          type: string
+          description: "MD5 хэш-сумма объекта"
+        file_size:
+          type: integer
+          description: Размер загруженного файла
+
+    FileDelete:
+      type: object
+      properties:
+        file_id:
+          type: string
+          description: ID файла
+        bucket_id:
+          type: string
+          description: ID бакета
+
+    Node:
+      type: object
+      properties:
+        id: 
+          type: integer
+          description: ID узла
+        ip:
+          type: string
+          description: IP адрес узла хранения
+        port:
+          type: integer
+          description: Порт для подключения
+  
+    ListNodes:
+      type: object
+      properties:
+        nodes:
+          type: array
+          $ref: "#/components/schemas/Node"
+          description: Список узлов хранения
+
+paths:
+  /bucket:
+    get:
+      summary: Получить список бакетов
+      tags:
+        - Бакеты
+      responses:
+        "200":
+          description: список бакетов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListBuckets"
+
+    post:
+      summary: Создать бакет
+      tags:
+        - Бакеты
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                bucket_name:
+                  type: string
+                  description: Название бакета
+      responses:
+        "200":
+          description: бакет создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bucket"
+
+  /bucket/{bucket_id}:
+    delete:
+      summary: Удалить бакет
+      tags:
+        - Бакеты
+      parameters:
+        - name: bucket_id
+          in: path
+          description: ID бакета
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: бакет удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID удаленного бакета
+        "404":
+          description: бакет не найден
+
+  /file/{bucket_id}:
+    get:
+      summary: Получить список файлов
+      tags:
+        - Файлы
+      parameters:
+        - name: bucket_id
+          in: path
+          description: ID бакета
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: список файлов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDownload"
+
+    post:
+      summary: Загрузить файл
+      tags:
+        - Файлы
+      parameters:
+        - name: bucket_id
+          in: path
+          description: ID бакета
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                binarydata:
+                  type: string
+                  description: Данные файла
+      responses:
+        "201":
+          description: Файл успешно загружен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileCreatedResponse"
+
+  /file/{bucket_id}/{file_id}:
+    delete:
+      summary: Удалить файл
+      tags:
+        - Файлы
+      parameters:
+        - name: bucket_id
+          in: path
+          description: ID бакета
+          schema:
+            type: integer
+          required: true 
+        - name: file_id
+          in: path
+          description: ID файла для удаления
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Файл удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID удаленного файла
+        "404":
+          description: Файл не найден
+  /node:
+    get:
+      summary: Получить список узлов хранения
+      tags:
+        - Узлы хранения
+      responses:
+          "200":
+            description: список бакетов
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/ListNodes"
+    post:
+      summary: Добавить узел хранения
+      tags:
+        - Узлы хранения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                ip: 
+                  type: string
+                  description: IP адрес узла
+                port:
+                  type: integer
+                  description: Порт для подключения
+      responses:
+        "200":
+          description: бакет создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bucket"
+        "422":
+          description: Узел с таким IP:port уже добавлен
+    
+  /node/{node_id}:
+    delete:
+      summary: Удалить узел хранения
+      tags:
+        - Узлы хранения
+      parameters:
+        - name: node_id
+          in: path
+          description: ID узла
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Узел удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID удаленного узла
+        "404":
+          description: узел не найден

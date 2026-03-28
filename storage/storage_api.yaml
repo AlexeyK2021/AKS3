@@ -59,7 +59,7 @@ paths:
 
   /status:
     get:
-      summary: Статистика хранилища
+      summary: Статистика узла хранения
       tags:
         - Информация о хранилище
       responses:
@@ -72,9 +72,9 @@ paths:
 
   /file/{chunk_id}:
     get:
-      summary: Получить чанк
+      summary: Скачать блок
       tags:
-        - Управление чанками
+        - Управление блоками
       parameters:
         - name: chunk_id
           in: path
@@ -84,7 +84,7 @@ paths:
             example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       responses:
         "200":
-          description: Чанк найден
+          description: Блок найден
           content:
             multipart/form-data:
               schema:
@@ -92,14 +92,14 @@ paths:
                 properties:
                   binary_data:
                     type: string
-                    description: Данные чанка
+                    description: Данные блока
         "404":
-          description: Чанк не найден
+          description: Блок не найден
 
     post:
-      summary: Загрузить чанк
+      summary: Загрузить блок
       tags:
-        - Управление чанками
+        - Управление блоками
       parameters:
         - name: chunk_id
           in: path
@@ -116,19 +116,19 @@ paths:
               properties:
                 binary_data:
                   type: string
-                  description: Данные чанка
+                  description: Данные блока
       responses:
         "201":
-          description: Чанк успешно загружен
+          description: Блок успешно загружен
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChunkCreatedResponse"
 
     delete:
-      summary: Удалить чанк
+      summary: Удалить блок
       tags:
-        - Управление чанками
+        - Управление блоками
       parameters:
         - name: chunk_id
           in: path
@@ -138,9 +138,9 @@ paths:
             example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       responses:
         "200":
-          description: Чанк удален
+          description: Блок удален
         "404":
-          description: Чанк не найден
+          description: Блок не найден
 
 
 

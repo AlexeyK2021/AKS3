@@ -41,6 +41,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # app.include_router(files.router)
 app.include_router(buckets.router)
 app.include_router(nodes.router)
+app.include_router(nodes.router)
 
 if __name__ == "__main__":
     try:

@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from controllers.DatabaseController import db_manager
 from controllers.models import Base
 from log import log
+from read.routers import buckets
 from routers import files
 
 load_dotenv()
@@ -39,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, root_path="/api")
 app.include_router(files.router)
-# app.include_router(buckets.router)
+app.include_router(buckets.router)
 # app.include_router(nodes.router)
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from control.DatabaseController import get_db, get_storages, db_manager, create_storage, commit_session, \
-    delete_storage
+    delete_storage, get_storage_by_id
 
 router = APIRouter(
     prefix="/node",
@@ -61,3 +61,28 @@ async def delete_node(node_id: int, db: AsyncSession = Depends(get_db)):
     await commit_session(session)
     await db_manager.close_session()
     return 200
+
+
+@router.get("/{node_id}/status")
+async def get_node_status(node_id: int, db: AsyncSession = Depends(get_db)):
+    session = await db_manager.get_session()
+    node = await get_storage_by_id(node_id, session)
+
+    if node is None:
+        raise HTTPException(status_code=404, detail=f"Хост c id={node_id} не зарегистрирован в системе")
+
+    metrics = {}
+    async with httpx.AsyncClient() as client:
+        try:
+            health = await client.get(f"http://{node.ip}:{node.port}/api/healthcheck", timeout=0.2)
+            online = health.status_code == 200
+
+            status_resp = await client.get(f"http://{node.ip}:{node.port}/api/status", timeout=0.2)
+            if status_resp.status_code == 200:
+                metrics = status_resp.json()  # <-- парсим JSON в словарь
+            else:
+                online = False
+        except (httpx.ConnectTimeout, httpx.RequestError, ValueError) as e:
+            online = False
+
+    return {"online": online, "metrics": metrics}

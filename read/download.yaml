@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: FastAPI
+  version: 0.1.0
+servers:
+- url: /api
+paths:
+  /file/{bucket_id}:
+    get:
+      summary: Получить список файлов
+      tags:
+        - Файлы
+      parameters:
+        - name: bucket_id
+          in: path
+          description: ID бакета
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: список файлов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDownload"
+
+  /file/{bucket_id}/{file_id}:
+    get:
+      tags:
+      - Файлы
+      summary: Скачать файл
+      parameters:
+      - name: bucket_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Bucket Id
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: File Id
+      responses:
+        '200':
+          description: Отправка файла
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /bucket:
+    get:
+      summary: Получить список бакетов
+      tags:
+        - Бакеты
+      responses:
+        "200":
+          description: список бакетов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListBuckets"
+components:
+  schemas:
+    FileDownload:
+      type: object
+      properties:
+        bucket_id:
+          type: integer
+          description: ID бакета
+        id:
+          type: integer
+          description: ID файла
+        status_id:
+          type: integer
+          description: Статус файла
+        filename:
+          type: string
+          description: Имя файла
+
+    Bucket:
+      type: object
+      properties:
+        bucket_id:
+          type: integer
+          description: ID бакета
+        bucket_name:
+          type: string
+          description: Имя бакета
+
+    ListBuckets:
+      type: object
+      properties:
+        buckets:
+          type: array
+          $ref: "#/components/schemas/Bucket"
+          description: Список бакетов
+
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

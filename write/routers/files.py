@@ -13,9 +13,9 @@ router = APIRouter(
 )
 
 
-# @router.get("/{bucket_id}")
-# async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)):
-#     return await get_files_by_bucket(bucket_id, db)
+@router.get("/{bucket_id}")
+async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)):
+    return await get_files_by_bucket(bucket_id, db)
 
 
 # TODO() Think about adding file, chunk, chunk_storage data into controllers only after its writing
@@ -46,6 +46,7 @@ async def upload_file(bucket_id: int, file: UploadFile, db: AsyncSession = Depen
 
     except Exception as e:
         new_file.status_id = FileStatusEnum.ERROR
+        log("FILE_API", f"Ошибка при сохранении блоков файла {file.filename}")
         raise HTTPException(status_code=500, detail=f"Ошибка при сохранении блоков: {str(e)}")
     finally:
         await commit_session(session)

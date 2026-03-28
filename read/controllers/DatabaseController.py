@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import select, delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
+from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
 
 
 async def commit_session(session: AsyncSession):
@@ -127,10 +127,11 @@ async def get_files_to_delete(session: AsyncSession):
 
 async def get_chunks_of_file(session: AsyncSession, file_id: int):
     return (await session.execute(
-        select(Chunk.id, Storage.ip, Storage.port)
+        select(Chunk.id, Chunk.chunk_index, Storage.ip, Storage.port)
         .join(ChunkStorage, Chunk.id == ChunkStorage.chunk_id)
         .join(Storage, ChunkStorage.storage_id == Storage.id)
         .where(Chunk.file_id == file_id)
+        .order_by(Chunk.chunk_index)
     )).all()
 
 
