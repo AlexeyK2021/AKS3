@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import select, delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
+from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum, \
+    Entity, Log
 
 
 async def commit_session(session: AsyncSession):
@@ -68,10 +69,10 @@ async def get_files_by_bucket(bucket_id: int, session: AsyncSession):
     )).scalars().all()
 
 
-async def get_file_in_bucket(bucket_id: int, file_id: int, session: AsyncSession):
+async def get_file_in_bucket(file_id: int, session: AsyncSession):
     return (await session.execute(
         select(File)
-        .where(File.bucket_id == bucket_id, File.id == file_id)
+        .where(File.id == file_id)
     )).scalars().first()
 
 
@@ -141,6 +142,15 @@ async def delete_file_info(session: AsyncSession, file_id: int):
     )))
     await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
     await session.execute(delete(File).where(File.id == file_id))
+    await session.flush()
+
+
+async def write_log(entity_name, entity_type: int, action: int, description: str, success: bool, session: AsyncSession):
+    new_entity = Entity(name=entity_name, type_id=entity_type)
+    session.add(new_entity)
+    await session.flush()
+    new_log = Log(action_id=action, entity_id=new_entity.id, success=success, description=description)
+    session.add(new_log)
     await session.flush()
 
 

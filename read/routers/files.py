@@ -18,13 +18,12 @@ async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)
     return await get_files_by_bucket(bucket_id, db)
 
 
-@router.get("/{bucket_id}/{file_id}")
+@router.get("/{file_id}")
 async def download_file(
-        bucket_id: int,
         file_id: int,
         db: AsyncSession = Depends(get_db)
 ):
-    file = await get_file_in_bucket(bucket_id, file_id, db)
+    file = await get_file_in_bucket(file_id, db)
     if not file or file.status_id != FileStatusEnum.ACTIVE:
         raise HTTPException(status_code=404, detail="Файл не найден или не готов")
 

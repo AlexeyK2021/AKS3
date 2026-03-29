@@ -8,7 +8,7 @@ servers:
 paths:
   /file/{bucket_id}:
     get:
-      summary: Получить список файлов
+      summary: Получить список файлов в корзине
       tags:
         - Файлы
       parameters:
@@ -54,7 +54,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/FileCreatedResponse"
 
-  /file/{bucket_id}/{file_id}:
+  /file/{file_id}:
     delete:
       summary: Удалить файл
       tags:
@@ -89,12 +89,12 @@ paths:
 
   /bucket:
     get:
-      summary: Получить список бакетов
+      summary: Получить список корзин
       tags:
-        - Бакеты
+        - Корзины
       responses:
         "200":
-          description: список бакетов
+          description: список корзин
           content:
             application/json:
               schema:

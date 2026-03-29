@@ -130,21 +130,21 @@ components:
 paths:
   /bucket:
     get:
-      summary: Получить список бакетов
+      summary: Получить список корзин
       tags:
-        - Бакеты
+        - Корзины
       responses:
         "200":
-          description: список бакетов
+          description: список корзин
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListBuckets"
 
     post:
-      summary: Создать бакет
+      summary: Создать корзину
       tags:
-        - Бакеты
+        - Корзины
       requestBody:
         required: true
         content:
@@ -153,10 +153,10 @@ paths:
               properties:
                 bucket_name:
                   type: string
-                  description: Название бакета
+                  description: Название корзины
       responses:
         "200":
-          description: бакет создан
+          description: корзина создана
           content:
             application/json:
               schema:
@@ -164,19 +164,19 @@ paths:
 
   /bucket/{bucket_id}:
     delete:
-      summary: Удалить бакет
+      summary: Удалить корзину
       tags:
-        - Бакеты
+        - Корзины
       parameters:
         - name: bucket_id
           in: path
-          description: ID бакета
+          description: ID корзины
           schema:
             type: integer
           required: true
       responses:
         "200":
-          description: бакет удален
+          description: корзина удалена
           content:
             application/json:
               schema:
@@ -184,9 +184,9 @@ paths:
                 properties:
                   id:
                     type: string
-                    description: ID удаленного бакета
+                    description: ID удаленной корзины
         "404":
-          description: бакет не найден
+          description: корзина не найден
 
   
   /node:
@@ -196,7 +196,7 @@ paths:
         - Узлы хранения
       responses:
           "200":
-            description: список бакетов
+            description: список узлов
             content:
               application/json:
                 schema:
@@ -219,7 +219,7 @@ paths:
                   description: Порт для подключения
       responses:
         "200":
-          description: бакет создан
+          description: узел создан
           content:
             application/json:
               schema:

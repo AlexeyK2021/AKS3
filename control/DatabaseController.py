@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from models import Base, Storage, Bucket
+from models import Base, Storage, Bucket, Entity, Log
 
 
 async def commit_session(session: AsyncSession):
@@ -125,6 +125,14 @@ async def delete_storage(node_id: int, session: AsyncSession):
         .where(Storage.id == node_id)
         .returning(Storage.id)
     )
+
+async def write_log(entity_name, entity_type: int, action: int, description: str, success: bool, session: AsyncSession):
+    new_entity = Entity(name=entity_name, type_id=entity_type)
+    session.add(new_entity)
+    await session.flush()
+    new_log = Log(action_id=action, entity_id=new_entity.id, success=success, description=description)
+    session.add(new_log)
+    await session.flush()
 
 
 # async def get_files_to_delete(session: AsyncSession):

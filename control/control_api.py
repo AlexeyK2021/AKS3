@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from DatabaseController import db_manager
+from control.models import EntityTypeEnum, ActionTypeEnum
 from log import log
 from models import Base
 from routers import buckets, nodes
@@ -18,7 +19,7 @@ API_PORT = int(os.getenv("API_PORT"))
 async def lifespan(app: FastAPI):
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    log("API", "База данных инициализирована")
+    # await log(entity_name="DB", entity_type=EntityTypeEnum.SYSTEM, action= ActionTypeEnum.INITIALIZE, success=True, description="Initializing DB")
 
     # gc = GarbageCollector(db_manager.session_factory)
     # gc_task = asyncio.create_task(gc.run_forever())
@@ -26,7 +27,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    log("API", "Остановка фоновых задач...")
+    print("API", "Остановка фоновых задач...")
     # gc_task.cancel()
     # try:
     #     await gc_task
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     #     log("API", "Garbage Collector успешно остановлен")
 
     await db_manager.engine.dispose()
-    log("API", "Соединение с БД закрыто")
+    print("API", "Соединение с БД закрыто")
 
 
 app = FastAPI(lifespan=lifespan, root_path="/api")
