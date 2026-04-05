@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.DatabaseController import db_manager, commit_session, write_log
+from control.controllers.database_controller import db_manager, commit_session, write_log
 
 
 async def log(entity_name, entity_type: int, action: int, description: str, success: bool, session: AsyncSession):

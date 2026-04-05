@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from models import Base, Storage, Bucket, Entity, Log
+from control.controllers.models import Base, Storage, Bucket, Entity, Log
 
 
 async def commit_session(session: AsyncSession):
@@ -76,7 +76,7 @@ async def rollback_session(session: AsyncSession):
 #     )).scalars().first()
 
 
-async def create_bucket(bucket_name: str, session: AsyncSession):
+async def db_create_bucket(bucket_name: str, session: AsyncSession):
     new_bucket = Bucket(name=bucket_name)
     # bucket_id = await session.execute(
     #     insert(Bucket)
@@ -87,12 +87,12 @@ async def create_bucket(bucket_name: str, session: AsyncSession):
     await session.flush()
 
 
-async def get_buckets_list(session: AsyncSession):
+async def db_get_buckets_list(session: AsyncSession):
     results = await session.execute(select(Bucket))
     return results.scalars().all()
 
 
-async def delete_bucket(bucket_id: int, session: AsyncSession):
+async def db_delete_bucket(bucket_id: int, session: AsyncSession):
     return await session.execute(
         delete(Bucket)
         .where(Bucket.id == bucket_id)
@@ -100,7 +100,7 @@ async def delete_bucket(bucket_id: int, session: AsyncSession):
     )
 
 
-async def get_storages(session: AsyncSession):
+async def db_get_storages(session: AsyncSession):
     result = await session.execute(select(Storage))
     return result.scalars().all()
 
@@ -113,8 +113,8 @@ async def get_storage_by_id(storage_id: int, session: AsyncSession):
     return result.scalars().first()
 
 
-async def create_storage(ip: str, port: int, session: AsyncSession):
-    new_storage = Storage(ip=ip, port=port)
+async def create_storage(ip: str, port: int, access_key: str, secret_key: str, session: AsyncSession):
+    new_storage = Storage(ip=ip, port=port, access_key=access_key, secret_key=secret_key)
     session.add(new_storage)
     await session.flush()
 
@@ -125,6 +125,7 @@ async def delete_storage(node_id: int, session: AsyncSession):
         .where(Storage.id == node_id)
         .returning(Storage.id)
     )
+
 
 async def write_log(entity_name, entity_type: int, action: int, description: str, success: bool, session: AsyncSession):
     new_entity = Entity(name=entity_name, type_id=entity_type)
