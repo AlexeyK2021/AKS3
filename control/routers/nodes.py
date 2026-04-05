@@ -35,8 +35,7 @@ class NodeRequest(BaseModel):
 
 
 @router.post("/")
-async def create_node(node: NodeRequest, db: AsyncSession = Depends(get_db)):
-    session = await db_manager.get_session()
+async def create_node(node: NodeRequest, session: AsyncSession = Depends(get_db)):
 
     storages = await db_get_storages(session)
     if (node.ip, node.port) in [(s.ip, s.port) for s in storages]:
@@ -91,8 +90,7 @@ async def create_node(node: NodeRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/{node_id}")
-async def delete_node(node_id: int, db: AsyncSession = Depends(get_db)):
-    session = await db_manager.get_session()
+async def delete_node(node_id: int, session: AsyncSession = Depends(get_db)):
     storages = await db_get_storages(session)
 
     if node_id not in [n.id for n in storages]:
@@ -121,8 +119,7 @@ async def delete_node(node_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{node_id}/status")
-async def get_node_status(node_id: int, db: AsyncSession = Depends(get_db)):
-    session = await db_manager.get_session()
+async def get_node_status(node_id: int, session: AsyncSession = Depends(get_db)):
     node = await get_storage_by_id(node_id, session)
     node_instance = f"{node.ip}:{node.port}"
     queries = {

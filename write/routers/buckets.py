@@ -11,7 +11,6 @@ router = APIRouter(
 
 @router.get("/")
 async def get_buckets(db: AsyncSession = Depends(get_db)):
-    session = await db_manager.get_session()
-    buckets = await get_buckets_list(session)
+    buckets = await get_buckets_list(db)
     await db_manager.close_session()
     return {"buckets": buckets}

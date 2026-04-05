@@ -10,26 +10,25 @@ class Base(DeclarativeBase):
 
 
 # ------------------- DATA---------------
-class FileStatusEnum:
+class File(Base):
+    __tablename__ = "file"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    filename: Mapped[str] = mapped_column()
+    bucket_id: Mapped[int] = mapped_column(ForeignKey("bucket.id"))
+    # size: Mapped[float] = mapped_column(nullable=True)
+    # md5sum: Mapped[str] = mapped_column()
+
+
+class ChunkStatusEnum:
     UPLOADING = 1
     ERROR = 2
     ACTIVE = 3
     DELETE = 4
 
 
-class File(Base):
-    __tablename__ = "file"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    filename: Mapped[str] = mapped_column()
-    status_id: Mapped[int] = mapped_column(ForeignKey("file_status.id"))
-    bucket_id: Mapped[int] = mapped_column(ForeignKey("bucket.id"))
-    # size: Mapped[float] = mapped_column(nullable=True)
-    # md5sum: Mapped[str] = mapped_column()
-
-
-class FileStatus(Base):
-    __tablename__ = "file_status"
+class ChunkStatus(Base):
+    __tablename__ = "chunk_status"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column()
 
@@ -40,6 +39,7 @@ class Chunk(Base):
     id: Mapped[str] = mapped_column(primary_key=True)
     file_id: Mapped[int] = mapped_column(ForeignKey("file.id"))
     chunk_index: Mapped[int] = mapped_column()
+    chunk_status: Mapped[int] = mapped_column(ForeignKey("chunk_status.id"))
 
 
 class ChunkStorage(Base):
@@ -56,6 +56,8 @@ class Storage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     ip: Mapped[str] = mapped_column()
     port: Mapped[int] = mapped_column()
+    access_key: Mapped[str] = mapped_column()
+    secret_key: Mapped[str] = mapped_column()
 
 
 class Bucket(Base):
@@ -72,12 +74,14 @@ class ActionTypeEnum:
     DOWNLOAD = 4
     INITIALIZE = 5
     STOP = 6
+    MARK_DELETE = 7
 
 
 class Action(Base):
     __tablename__ = "action"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column()
+    description: Mapped[str] = mapped_column()
 
 
 class EntityTypeEnum:
@@ -107,5 +111,5 @@ class Log(Base):
     action_id: Mapped[int] = mapped_column(ForeignKey("action.id"))
     entity_id: Mapped[int] = mapped_column(ForeignKey("entity.id"))
     description: Mapped[str] = mapped_column()
-    datetime: Mapped[datetime] = mapped_column(TIMESTAMP,server_default=text('NOW()'))
+    datetime: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text('NOW()'))
     success: Mapped[bool] = mapped_column()

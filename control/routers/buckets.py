@@ -16,8 +16,7 @@ router = APIRouter(
 
 @router.get("/")
 async def get_buckets(db: AsyncSession = Depends(get_db)):
-    session = await db_manager.get_session()
-    buckets = await db_get_buckets_list(session)
+    buckets = await db_get_buckets_list(db)
 
     await db_manager.close_session()
     return {"buckets": buckets}
@@ -28,10 +27,8 @@ class BucketRequest(BaseModel):
 
 
 @router.post("/")
-async def add_bucket(bucket: BucketRequest, db: AsyncSession = Depends(get_db)):
+async def add_bucket(bucket: BucketRequest, session: AsyncSession = Depends(get_db)):
     bucket_name = bucket.bucket_name
-
-    session = await db_manager.get_session()
 
     buckets = await db_get_buckets_list(session)
     if bucket_name in [b.name for b in buckets]:
@@ -60,8 +57,7 @@ async def add_bucket(bucket: BucketRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/{bucket_id}")
-async def remove_bucket(bucket_id: int):
-    session = await db_manager.get_session()
+async def remove_bucket(bucket_id: int, session: AsyncSession = Depends(get_db)):
 
     buckets = await db_get_buckets_list(session)
     if bucket_id not in [b.id for b in buckets]:

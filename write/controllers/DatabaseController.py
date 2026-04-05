@@ -3,7 +3,10 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import select, delete, insert, update
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from write.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum
+from sqlalchemy.sql.functions import func
+
+from write.controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
+    ChunkStatus, ChunkStatusEnum
 
 
 async def commit_session(session: AsyncSession):
@@ -26,10 +29,18 @@ async def save_chunk_info(chunk_id: str, file_name: str, chunk_index: int, sessi
         select(File)
         .where(File.filename == file_name)
     )).scalars().all()[0]
-    new_chunk = Chunk(id=chunk_id, file_id=file.id, chunk_index=chunk_index)
+    new_chunk = Chunk(id=chunk_id, file_id=file.id, chunk_index=chunk_index, chunk_status=ChunkStatusEnum.UPLOADING)
+    session.add(new_chunk)
     session.add(new_chunk)
     await session.flush()
     # await session.commit()
+
+
+async def make_chunk_active(chunk_uuid: str, session: AsyncSession):
+    await session.execute(
+        update(Chunk).where(Chunk.id == chunk_uuid).values(chunk_status=ChunkStatusEnum.ACTIVE)
+    )
+    await session.flush()
 
 
 async def save_chunk_storage_info(chunk_id: str, storage_url: str, session: AsyncSession):
@@ -48,8 +59,8 @@ async def get_useless_chunks(session: AsyncSession):
     result = (await session.execute(
         select(Chunk)
         .join(File, Chunk.file_id == File.id)
-        .join(FileStatus, File.status_id == FileStatus.id)
-        .where(FileStatus.name == "error")
+        .join(ChunkStatus, Chunk.chunk_status == ChunkStatus.id)
+        .where(ChunkStatus.name == "error")
     )).scalars().all()
     return result
 
@@ -62,10 +73,32 @@ async def get_chunk_storage(chunk_id: str, session: AsyncSession):
 
 
 async def get_files_by_bucket(bucket_id: int, session: AsyncSession):
-    return (await session.execute(
+    total_file_chunks = (
+        select(func.count(Chunk.id))
+        .where(Chunk.file_id == File.id)
+        .scalar_subquery()
+        .correlate(File)
+    )
+
+    active_file_chunks = (
+        select(func.count(Chunk.id))
+        .join(ChunkStatus, Chunk.chunk_status == ChunkStatus.id)
+        .where(Chunk.file_id == File.id)
+        .where(ChunkStatus.name == 'active')
+        .scalar_subquery()
+        .correlate(File)
+    )
+
+    stmt = (
         select(File)
-        .where(File.bucket_id == bucket_id, File.status_id == FileStatusEnum.ACTIVE)
-    )).scalars().all()
+        .join(Bucket, Bucket.id == File.bucket_id)
+        .where(total_file_chunks == active_file_chunks)
+        .where(total_file_chunks > 0)
+    )
+
+    result = await session.execute(stmt)
+    files = result.scalars().all()
+    return files
 
 
 async def get_file_in_bucket(file_id: int, session: AsyncSession):
@@ -118,11 +151,18 @@ async def delete_storage(node_id: int, session: AsyncSession):
     )
 
 
-async def get_files_to_delete(session: AsyncSession):
-    return (await session.execute(
-        select(File)
-        .where(File.status_id.in_([FileStatusEnum.DELETE, FileStatusEnum.ERROR]))
-    )).scalars().all()
+async def set_file_to_delete(file_id: int, session: AsyncSession):
+    await session.execute(
+        update(Chunk).where(Chunk.file_id == file_id).values(chunk_status=ChunkStatusEnum.DELETE)
+    )
+    await session.flush()
+
+
+# async def get_files_to_delete(session: AsyncSession):
+#     return (await session.execute(
+#         select(File)
+#         .where(File.status_id.in_([FileStatusEnum.DELETE, FileStatusEnum.ERROR]))
+#     )).scalars().all()
 
 
 async def get_chunks_of_file(session: AsyncSession, file_id: int):
