@@ -5,9 +5,8 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from controllers.DatabaseController import db_manager
-from controllers.models import Base
-from log import log
+from write.controllers.database_controller import db_manager
+from write.controllers.models import Base
 from routers import files
 from write.routers import buckets
 

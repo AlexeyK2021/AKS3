@@ -1,10 +1,13 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import select, delete, insert, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, FileStatus, Bucket, FileStatusEnum, \
-    Entity, Log
+from sqlalchemy.sql.functions import func
+
+from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
+    ChunkStatus
+from read.controllers.models import Entity, Log
 
 
 async def commit_session(session: AsyncSession):
@@ -15,11 +18,11 @@ async def rollback_session(session: AsyncSession):
     await session.rollback()
 
 
-async def add_file_info(new_file: File, session: AsyncSession):
-    # new_file = FileMetadata(filename=filename, status_id=status_id)
-    session.add(new_file)
-    await session.flush()
-    # await session.commit()
+# async def add_file_info(new_file: File, session: AsyncSession):
+#     # new_file = FileMetadata(filename=filename, status_id=status_id)
+#     session.add(new_file)
+#     await session.flush()
+#     # await session.commit()
 
 
 async def save_chunk_info(chunk_id: str, file_name: str, chunk_index: int, session: AsyncSession):
@@ -45,28 +48,50 @@ async def save_chunk_storage_info(chunk_id: str, storage_url: str, session: Asyn
     # await session.commit()
 
 
-async def get_useless_chunks(session: AsyncSession):
-    result = (await session.execute(
-        select(Chunk)
-        .join(File, Chunk.file_id == File.id)
-        .join(FileStatus, File.status_id == FileStatus.id)
-        .where(FileStatus.name == "error")
-    )).scalars().all()
-    return result
+# async def get_useless_chunks(session: AsyncSession):
+#     result = (await session.execute(
+#         select(Chunk)
+#         .join(File, Chunk.file_id == File.id)
+#         .join(FileStatus, File.status_id == FileStatus.id)
+#         .where(FileStatus.name == "error")
+#     )).scalars().all()
+#     return result
 
 
-async def get_chunk_storage(chunk_id: str, session: AsyncSession):
-    return (await session.execute(
-        select(ChunkStorage)
-        .where(ChunkStorage.chunk_id == chunk_id)
-    )).scalars().all()
+# async def get_chunk_storage(chunk_id: str, session: AsyncSession):
+#     return (await session.execute(
+#         select(ChunkStorage)
+#         .where(ChunkStorage.chunk_id == chunk_id)
+#     )).scalars().all()
 
 
 async def get_files_by_bucket(bucket_id: int, session: AsyncSession):
-    return (await session.execute(
+    total_file_chunks = (
+        select(func.count(Chunk.id))
+        .where(Chunk.file_id == File.id)
+        .scalar_subquery()
+        .correlate(File)
+    )
+
+    active_file_chunks = (
+        select(func.count(Chunk.id))
+        .join(ChunkStatus, Chunk.chunk_status == ChunkStatus.id)
+        .where(Chunk.file_id == File.id)
+        .where(ChunkStatus.name == 'active')
+        .scalar_subquery()
+        .correlate(File)
+    )
+
+    stmt = (
         select(File)
-        .where(File.bucket_id == bucket_id, File.status_id == FileStatusEnum.ACTIVE)
-    )).scalars().all()
+        .join(Bucket, Bucket.id == File.bucket_id)
+        .where(total_file_chunks == active_file_chunks)
+        .where(total_file_chunks > 0)
+    )
+
+    result = await session.execute(stmt)
+    files = result.scalars().all()
+    return files
 
 
 async def get_file_in_bucket(file_id: int, session: AsyncSession):
@@ -76,15 +101,15 @@ async def get_file_in_bucket(file_id: int, session: AsyncSession):
     )).scalars().first()
 
 
-async def create_bucket(bucket_name: str, session: AsyncSession):
-    new_bucket = Bucket(name=bucket_name)
-    # bucket_id = await session.execute(
-    #     insert(Bucket)
-    #     .values()
-    #     .returning(Bucket.id)
-    # )
-    session.add(new_bucket)
-    await session.flush()
+# async def create_bucket(bucket_name: str, session: AsyncSession):
+#     new_bucket = Bucket(name=bucket_name)
+#     # bucket_id = await session.execute(
+#     #     insert(Bucket)
+#     #     .values()
+#     #     .returning(Bucket.id)
+#     # )
+#     session.add(new_bucket)
+#     await session.flush()
 
 
 async def get_buckets_list(session: AsyncSession):
@@ -92,12 +117,12 @@ async def get_buckets_list(session: AsyncSession):
     return results.scalars().all()
 
 
-async def delete_bucket(bucket_id: int, session: AsyncSession):
-    return await session.execute(
-        delete(Bucket)
-        .where(Bucket.id == bucket_id)
-        .returning(Bucket.id)
-    )
+# async def delete_bucket(bucket_id: int, session: AsyncSession):
+#     return await session.execute(
+#         delete(Bucket)
+#         .where(Bucket.id == bucket_id)
+#         .returning(Bucket.id)
+#     )
 
 
 async def get_storages(session: AsyncSession):
@@ -105,25 +130,25 @@ async def get_storages(session: AsyncSession):
     return result.scalars().all()
 
 
-async def create_storage(ip: str, port: int, session: AsyncSession):
-    new_storage = Storage(ip=ip, port=port)
-    session.add(new_storage)
-    await session.flush()
+# async def create_storage(ip: str, port: int, session: AsyncSession):
+#     new_storage = Storage(ip=ip, port=port)
+#     session.add(new_storage)
+#     await session.flush()
 
 
-async def delete_storage(node_id: int, session: AsyncSession):
-    return await session.execute(
-        delete(Storage)
-        .where(Storage.id == node_id)
-        .returning(Storage.id)
-    )
+# async def delete_storage(node_id: int, session: AsyncSession):
+#     return await session.execute(
+#         delete(Storage)
+#         .where(Storage.id == node_id)
+#         .returning(Storage.id)
+#     )
 
 
-async def get_files_to_delete(session: AsyncSession):
-    return (await session.execute(
-        select(File)
-        .where(File.status_id.in_([FileStatusEnum.DELETE, FileStatusEnum.ERROR]))
-    )).scalars().all()
+# async def get_files_to_delete(session: AsyncSession):
+#     return (await session.execute(
+#         select(File)
+#         .where(File.status_id.in_([FileStatusEnum.DELETE, FileStatusEnum.ERROR]))
+#     )).scalars().all()
 
 
 async def get_chunks_of_file(session: AsyncSession, file_id: int):
@@ -136,13 +161,13 @@ async def get_chunks_of_file(session: AsyncSession, file_id: int):
     )).all()
 
 
-async def delete_file_info(session: AsyncSession, file_id: int):
-    await session.execute(delete(ChunkStorage).where(ChunkStorage.chunk_id.in_(
-        select(Chunk.id).where(Chunk.file_id == file_id)
-    )))
-    await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
-    await session.execute(delete(File).where(File.id == file_id))
-    await session.flush()
+# async def delete_file_info(session: AsyncSession, file_id: int):
+#     await session.execute(delete(ChunkStorage).where(ChunkStorage.chunk_id.in_(
+#         select(Chunk.id).where(Chunk.file_id == file_id)
+#     )))
+#     await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
+#     await session.execute(delete(File).where(File.id == file_id))
+#     await session.flush()
 
 
 async def write_log(entity_name, entity_type: int, action: int, description: str, success: bool, session: AsyncSession):

@@ -1,69 +1,108 @@
 import asyncio
 import os
+from concurrent.futures import ThreadPoolExecutor
 
-import httpx
 from dotenv import load_dotenv
+from minio import Minio
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from DatabaseController import get_files_to_delete, get_chunks_of_file, delete_file_info
-from models import FileStatusEnum
+from DatabaseController import get_files_to_delete, get_filename_and_bucket, get_file_chunks_to_delete
 from log import log
+from models import File, Chunk, ChunkStorage, EntityTypeEnum, ActionTypeEnum
 
 load_dotenv()
-GARBAGE_COLLECTOR_PERIOD_SECS = float(os.getenv("GARBAGE_COLLECTOR_PERIOD_SECS"))
-
+GARBAGE_COLLECTOR_PERIOD_SECS = float(os.getenv("GARBAGE_COLLECTOR_PERIOD_SECS", 30))
+executor = ThreadPoolExecutor(max_workers=20)
+MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME")
 
 class GarbageCollector:
     def __init__(self, session_factory):
         self.session_factory = session_factory
-        self.status_delete_id = FileStatusEnum.DELETE
 
     async def run_forever(self):
+        print("GC", "Сборщик мусора запущен")
         while True:
             try:
-                await self.cleanup_orphaned_files()
+                await self.cleanup_process()
             except Exception as e:
-                log("GC", f"Ошибка в работе: {e}")
-
+                print("GC", f"Критическая ошибка в цикле: {e}")
             await asyncio.sleep(GARBAGE_COLLECTOR_PERIOD_SECS)
 
-    async def cleanup_orphaned_files(self):
+    async def cleanup_process(self):
         async with self.session_factory() as session:
-            files_to_delete = await get_files_to_delete(session)
+            file_ids = await get_files_to_delete(session)
 
-            if not files_to_delete:
+            if not file_ids:
                 return
 
-            log("GC", f"Найдено {len(files_to_delete)} файлов для удаления.")
+            for f_id in file_ids:
+                await self.delete_file_logic(f_id, session)
 
-            for file in files_to_delete:
-                log("GC", f"Удаление файла {file.filename}")
-                await self.delete_file_completely(file, session)
+    async def delete_file_logic(self, file_id: int, session: AsyncSession):
+        file_info = await get_filename_and_bucket(session, file_id)
+        if not file_info:
+            return
 
-    async def delete_file_completely(self, file, session: AsyncSession):
-        locations = await get_chunks_of_file(session, file.id)
+        filename, bucket_name = file_info
+        locations = await get_file_chunks_to_delete(session, file_id)
 
-        async with httpx.AsyncClient() as client:
-            tasks = []
-            for chunk_id, ip, port in locations:
-                url = f"http://{ip}:{port}/api/file/{chunk_id}"
-                tasks.append(client.delete(url, timeout=2.0))
+        if not locations:
+            return
 
-            if tasks:
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+        loop = asyncio.get_running_loop()
+        tasks = []
 
-            bad = 0
-            for r in results:
-                if isinstance(r, Exception):
-                    bad += 1
+        def minio_worker(ip, port, access, secret, obj_name):
+            try:
+                client = Minio(f"{ip}:{port}", access_key=access, secret_key=secret, secure=False)
+                client.remove_object(MINIO_BUCKET_NAME, obj_name)
+                return True
+            except Exception as e:
+                print(f"GC MinIO Error [{ip}:{port}]: {e}")
+                return False
 
-            log("GC", f"Отправлено {len(tasks)} команд на удаление для файла {file.filename}")
-            log("GC", f"Неуспешно выполнено {bad} команд на удаление для файла {file.filename}")
+        for c_uuid, ip, port, access, secret in locations:
+            tasks.append(
+                loop.run_in_executor(executor, minio_worker, ip, port, access, secret, c_uuid)
+            )
 
-            if bad == 0:
-                await delete_file_info(session, file.id)
+        results = await asyncio.gather(*tasks)
+        bad_nodes = results.count(False)
+
+        if bad_nodes == 0:
+            try:
+                chunk_ids_stmt = select(Chunk.id).where(Chunk.file_id == file_id)
+
+                await session.execute(
+                    delete(ChunkStorage).where(ChunkStorage.chunk_id.in_(chunk_ids_stmt))
+                )
+                await session.execute(
+                    delete(Chunk).where(Chunk.file_id == file_id)
+                )
+
+                count_res = await session.execute(
+                    select(func.count(Chunk.id)).where(Chunk.file_id == file_id)
+                )
+                remaining_chunks = count_res.scalar()
+
+                if remaining_chunks == 0:
+                    await session.execute(delete(File).where(File.id == file_id))
+                    await log(
+                        entity_name=f"{file_id}",
+                        entity_type=EntityTypeEnum.FILE,
+                        action=ActionTypeEnum.REMOVE,
+                        description="Файл полностью стерт из системы",
+                        success=True,
+                        session=session
+                    )
+                    print("GC", f"Файл {filename} полностью стерт из системы.")
+                else:
+                    print("GC", f"Удалены блоки 'delete' файла {filename}. Осталось блоков: {remaining_chunks}")
 
                 await session.commit()
-                log("GC", f"Файл {file.filename} полностью удален из системы.")
-            else:
-                log("GC", f"Файл {file.filename} удален только с некоторых нод")
+            except Exception as e:
+                await session.rollback()
+                print("GC", f"Ошибка БД при очистке {filename}: {e}")
+        else:
+            print("GC", f"Пропуск очистки БД для {filename}: {bad_nodes} копий не удалено физически.")

@@ -1,127 +1,144 @@
-import httpx
+import asyncio
+import os
+from concurrent.futures import ThreadPoolExecutor
+
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException
+from minio import Minio
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
-from read.controllers.DatabaseController import get_chunks_of_file
-from read.controllers.DatabaseController import get_db, get_file_in_bucket, get_files_by_bucket
-from read.controllers.models import FileStatusEnum
+from read.controllers.database_controller import get_chunks_of_file, get_storages
+from read.controllers.database_controller import get_db, get_file_in_bucket, get_files_by_bucket
+from read.controllers.models import EntityTypeEnum, ActionTypeEnum
+from read.log import log
 
 router = APIRouter(
     prefix="/file",
     tags=["File"]
 )
 
+load_dotenv()
+MINIO_BUCKET_NAME=os.getenv("MINIO_BUCKET_NAME")
 
-@router.get("/{bucket_id}")
+@router.get("/in/{bucket_id}")
 async def get_files_in_bucket(bucket_id: int, db: AsyncSession = Depends(get_db)):
     return await get_files_by_bucket(bucket_id, db)
 
 
+executor = ThreadPoolExecutor(max_workers=10)
+
 @router.get("/{file_id}")
 async def download_file(
         file_id: int,
-        db: AsyncSession = Depends(get_db)
+        session: AsyncSession = Depends(get_db)
 ):
-    file = await get_file_in_bucket(file_id, db)
-    if not file or file.status_id != FileStatusEnum.ACTIVE:
-        raise HTTPException(status_code=404, detail="Файл не найден или не готов")
+    print(file_id)
+    file = await get_file_in_bucket(file_id, session)
+    if not file:
+        await log(
+            entity_name=f"{file_id}",
+            entity_type=EntityTypeEnum.FILE,
+            action=ActionTypeEnum.DOWNLOAD,
+            description="Файл не найден",
+            success=False,
+            session=session
+        )
+        raise HTTPException(status_code=404, detail="Файл не найден")
 
-    chunks = await get_chunks_of_file(db, file_id)
-
+    chunks = await get_chunks_of_file(session, file_id)
     if not chunks:
+        await log(
+            entity_name=f"{file_id}",
+            entity_type=EntityTypeEnum.CHUNK,
+            action=ActionTypeEnum.DOWNLOAD,
+            description="Блоки файла не найдены",
+            success=False,
+            session=session
+        )
         raise HTTPException(status_code=404, detail="Блоки файла не найдены")
 
+    storages_list = await get_storages(session)
+
+    storage_keys_map = {
+        (s.ip, s.port): {"access": s.access_key, "secret": s.secret_key}
+        for s in storages_list
+    }
+
     chunk_map = {}
-
-    for chunk_id, chunk_index, ip, port in chunks:
-        url = f"http://{ip}:{port}/file/{chunk_id}"
-
+    for chunk_uuid, chunk_index, ip, port in chunks:
         if chunk_index not in chunk_map:
             chunk_map[chunk_index] = []
 
+        keys = storage_keys_map.get((ip, port))
+
+        if not keys:
+            print(f"ВНИМАНИЕ: Ключи для ноды {ip}:{port} не найдены в БД")
+            continue
+
         chunk_map[chunk_index].append({
-            "chunk_id": chunk_id,
-            "url": url
+            "uuid": chunk_uuid,
+            "node_url": f"{ip}:{port}",
+            "access_key": keys["access"],
+            "secret_key": keys["secret"]
         })
 
     ordered_indexes = sorted(chunk_map.keys())
 
     async def file_stream():
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        loop = asyncio.get_running_loop()
 
-            for index in ordered_indexes:
-                replicas = chunk_map[index]
-                chunk_downloaded = False
 
-                for replica in replicas:
-                    try:
-                        response = await client.get(replica["url"])
-                        if response.status_code == 200:
-                            yield response.content
-                            chunk_downloaded = True
-                            break
+        for index in ordered_indexes:
+            replicas = chunk_map[index]
+            chunk_downloaded = False
 
-                    except Exception:
-                        continue  # пробуем следующую ноду
-
-                if not chunk_downloaded:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Не удалось скачать блок index={index}"
+            for replica in replicas:
+                try:
+                    client = Minio(
+                        replica["node_url"],
+                        access_key=replica["access_key"],
+                        secret_key=replica["secret_key"],
+                        secure=False
                     )
+
+                    def fetch_from_minio():
+                        response = client.get_object(MINIO_BUCKET_NAME, replica["uuid"])
+                        try:
+                            return response.read()
+                        finally:
+                            response.close()
+                            response.release_conn()
+
+                    chunk_data = await loop.run_in_executor(executor, fetch_from_minio)
+
+                    yield chunk_data
+                    chunk_downloaded = True
+                    break
+
+                except Exception as e:
+                    await log(
+                        entity_name=f"{replica['uuid']}",
+                        entity_type=EntityTypeEnum.CHUNK,
+                        action=ActionTypeEnum.DOWNLOAD,
+                        description="Ошибка при скачивании чанка",
+                        success=False,
+                        session=session
+                    )
+                    print(f"Ошибка при скачивании чанка {replica['uuid']} с {replica['node_url']}: {e}")
+                    continue
+
+            if not chunk_downloaded:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Не удалось восстановить блок index={index}"
+                )
 
     return StreamingResponse(
         file_stream(),
         media_type="application/octet-stream",
         headers={
             "Content-Disposition": f"attachment; filename={file.filename}"
+            # Убрали Content-Length, чтобы избежать ошибок валидации
         }
     )
-
-#
-# # TODO() Think about adding file, chunk, chunk_storage data into controllers only after its writing
-# @router.post("/{bucket_id}")
-# async def upload_file(bucket_id: int, file: UploadFile, db: AsyncSession = Depends(get_db)):
-#     original_name = file.filename
-#
-#     target_nodes = await get_most_relevant(await find_online_nodes(db))
-#
-#     if not target_nodes:
-#         raise HTTPException(status_code=503, detail="Нет доступных нод")
-#
-#     log("FILE_API", f"Начита загрузка файла: {original_name}")
-#     session = await db_manager.get_session()
-#     new_file = File(filename=original_name, status_id=FileStatusEnum.UPLOADING, bucket_id=bucket_id)
-#     try:
-#         await add_file_info(new_file, session)
-#         result = await process_file_upload(file, original_name, target_nodes, session)
-#         new_file.status_id = FileStatusEnum.ACTIVE
-#
-#         return {
-#             "filename": original_name,
-#             "bucket_id": bucket_id,
-#             "chunks": result['total_chunks'],
-#             "nodes": target_nodes,
-#             "status": "success"
-#         }
-#
-#     except Exception as e:
-#         new_file.status_id = FileStatusEnum.ERROR
-#         raise HTTPException(status_code=500, detail=f"Ошибка при сохранении блоков: {str(e)}")
-#     finally:
-#         await commit_session(session)
-#         await db_manager.close_session()
-#
-#
-# @router.delete("/{bucket_id}/{file_id}")
-# async def delete_file(bucket_id: int, file_id: int, db: AsyncSession = Depends(get_db)):
-#     file = await get_file_in_bucket(bucket_id, file_id, db)
-#     if not file:
-#         raise HTTPException(status_code=404, detail="Файл не найден")
-#
-#     file.status_id = FileStatusEnum.DELETE
-#     await db.commit()
-#     await db_manager.close_session()
-#     log("FILE_API", f"Файл {file.filename}({file_id}) помечен для удаления")
-#     return {"id": file.id}

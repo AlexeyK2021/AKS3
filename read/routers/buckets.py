@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from read.controllers.DatabaseController import get_db, db_manager, get_buckets_list
+from read.controllers.database_controller import get_db, db_manager, get_buckets_list
 
 router = APIRouter(
     prefix="/bucket",

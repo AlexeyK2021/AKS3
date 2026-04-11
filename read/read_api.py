@@ -5,9 +5,8 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from controllers.DatabaseController import db_manager
+from controllers.database_controller import db_manager
 from controllers.models import Base
-from log import log
 from read.routers import buckets
 from routers import files
 
@@ -19,7 +18,7 @@ API_PORT = int(os.getenv("API_PORT"))
 async def lifespan(app: FastAPI):
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    log("API", "База данных инициализирована")
+    print("API", "База данных инициализирована")
 
     # gc = GarbageCollector(db_manager.session_factory)
     # gc_task = asyncio.create_task(gc.run_forever())
@@ -27,7 +26,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    log("API", "Остановка фоновых задач...")
+    print("API", "Остановка фоновых задач...")
     # gc_task.cancel()
     # try:
     #     await gc_task
@@ -35,7 +34,7 @@ async def lifespan(app: FastAPI):
     #     log("API", "Garbage Collector успешно остановлен")
 
     await db_manager.engine.dispose()
-    log("API", "Соединение с БД закрыто")
+    print("API", "Соединение с БД закрыто")
 
 
 app = FastAPI(lifespan=lifespan, root_path="/api")

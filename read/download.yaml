@@ -5,7 +5,7 @@ info:
 servers:
 - url: /api
 paths:
-  /file/{bucket_id}:
+  /file/in/{bucket_id}:
     get:
       summary: Получить список файлов в корзине
       tags:
