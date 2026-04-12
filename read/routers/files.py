@@ -33,7 +33,6 @@ async def download_file(
         file_id: int,
         session: AsyncSession = Depends(get_db)
 ):
-    print(file_id)
     file = await get_file_in_bucket(file_id, session)
     if not file:
         await log(
@@ -139,6 +138,5 @@ async def download_file(
         media_type="application/octet-stream",
         headers={
             "Content-Disposition": f"attachment; filename={file.filename}"
-            # Убрали Content-Length, чтобы избежать ошибок валидации
         }
     )
