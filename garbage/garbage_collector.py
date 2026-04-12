@@ -1,7 +1,7 @@
 import asyncio
 import signal
 
-from DataLivecycleController import GarbageCollector
+from data_livecycle_controller import GarbageCollector
 from DatabaseController import db_manager
 
 

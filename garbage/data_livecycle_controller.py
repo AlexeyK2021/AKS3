@@ -16,6 +16,7 @@ GARBAGE_COLLECTOR_PERIOD_SECS = float(os.getenv("GARBAGE_COLLECTOR_PERIOD_SECS",
 executor = ThreadPoolExecutor(max_workers=20)
 MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME")
 
+
 class GarbageCollector:
     def __init__(self, session_factory):
         self.session_factory = session_factory
@@ -92,7 +93,7 @@ class GarbageCollector:
                         entity_name=f"{file_id}",
                         entity_type=EntityTypeEnum.FILE,
                         action=ActionTypeEnum.REMOVE,
-                        description="Файл полностью стерт из системы",
+                        description="Файл полностью удален из системы",
                         success=True,
                         session=session
                     )
