@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir logs
+touch logs/control.log logs/garbage.log logs/read.log logs/write.log
 
 echo "1. Starting Control"
 echo "1.0 Create .venv"
