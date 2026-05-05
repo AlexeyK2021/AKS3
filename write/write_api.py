@@ -5,10 +5,10 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from write.controllers.database_controller import db_manager
-from write.controllers.models import Base
+from controllers.database_controller import db_manager
+from controllers.models import Base
 from routers import files
-from write.routers import buckets
+from routers import buckets
 
 load_dotenv()
 API_PORT = int(os.getenv("API_PORT"))

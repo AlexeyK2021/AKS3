@@ -1,12 +1,12 @@
-from control.controllers.database_controller import get_db, db_manager, commit_session, db_create_bucket, \
+from controllers.database_controller import get_db, db_manager, commit_session, db_create_bucket, \
     db_get_buckets_list, \
     db_delete_bucket
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.log import log
-from control.controllers.models import EntityTypeEnum, ActionTypeEnum
+from log import log
+from controllers.models import EntityTypeEnum, ActionTypeEnum
 
 router = APIRouter(
     prefix="/bucket",

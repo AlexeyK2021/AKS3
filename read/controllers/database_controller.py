@@ -5,9 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.sql.functions import func
 
-from read.controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
+from controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
     ChunkStatus
-from read.controllers.models import Entity, Log
+from controllers.models import Entity, Log
 
 
 async def commit_session(session: AsyncSession):

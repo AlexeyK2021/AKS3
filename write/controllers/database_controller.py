@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.sql.functions import func
 
-from write.controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
+from controllers.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, \
     ChunkStatus, ChunkStatusEnum, Entity, Log
 
 

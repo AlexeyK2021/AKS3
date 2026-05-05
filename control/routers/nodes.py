@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.controllers.database_controller import get_db, db_get_storages, db_manager, create_storage, commit_session, \
+from controllers.database_controller import get_db, db_get_storages, db_manager, create_storage, commit_session, \
     delete_storage, get_storage_by_id
-from control.log import log
-from control.controllers.models import EntityTypeEnum, ActionTypeEnum
+from log import log
+from controllers.models import EntityTypeEnum, ActionTypeEnum
 
 router = APIRouter(
     prefix="/node",

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from control.controllers.models import Base, Storage, Bucket, Entity, Log
+from controllers.models import Base, Storage, Bucket, Entity, Log
 
 
 async def commit_session(session: AsyncSession):

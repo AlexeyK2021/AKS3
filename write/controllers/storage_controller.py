@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control.log import log
-from write.controllers.database_controller import save_chunk_info, save_chunk_storage_info, get_storages, \
+from log import log
+from controllers.database_controller import save_chunk_info, save_chunk_storage_info, get_storages, \
     make_chunk_active
-from write.controllers.models import EntityTypeEnum, ActionTypeEnum
+from controllers.models import EntityTypeEnum, ActionTypeEnum
 
 load_dotenv()
 PATH = os.getenv("DATA_PATH")

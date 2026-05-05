@@ -8,10 +8,10 @@ from minio import Minio
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
-from read.controllers.database_controller import get_chunks_of_file, get_storages
-from read.controllers.database_controller import get_db, get_file_in_bucket, get_files_by_bucket
-from read.controllers.models import EntityTypeEnum, ActionTypeEnum
-from read.log import log
+from controllers.database_controller import get_chunks_of_file, get_storages
+from controllers.database_controller import get_db, get_file_in_bucket, get_files_by_bucket
+from controllers.models import EntityTypeEnum, ActionTypeEnum
+from log import log
 
 router = APIRouter(
     prefix="/file",

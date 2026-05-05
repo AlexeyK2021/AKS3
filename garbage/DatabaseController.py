@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from garbage.models import Base, File, Chunk, ChunkStorage, Storage, Bucket, ChunkStatus, \
+from models import Base, File, Chunk, ChunkStorage, Storage, Bucket, ChunkStatus, \
     Entity, Log
 
 

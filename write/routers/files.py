@@ -1,11 +1,11 @@
 from fastapi import APIRouter, UploadFile, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from write.log import log
-from write.controllers.database_controller import get_db, db_manager, add_file_info, commit_session, \
+from log import log
+from controllers.database_controller import get_db, db_manager, add_file_info, commit_session, \
     get_file_in_bucket, get_files_by_bucket, set_file_to_delete
-from write.controllers.models import File, EntityTypeEnum, ActionTypeEnum
-from write.controllers.storage_controller import get_most_relevant, process_file_upload
+from controllers.models import File, EntityTypeEnum, ActionTypeEnum
+from controllers.storage_controller import get_most_relevant, process_file_upload
 
 router = APIRouter(
     prefix="/file",

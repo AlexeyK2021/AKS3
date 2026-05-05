@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from controllers.database_controller import db_manager
 from controllers.models import Base
-from read.routers import buckets
+from routers import buckets
 from routers import files
 
 load_dotenv()
